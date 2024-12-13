@@ -32,7 +32,7 @@ export class UsersController {
   @Patch(':userId')
   async updateUser(
     @Param('userId') userId: string,
-    updatedUserDto: Partial<CreateUserDto>,
+    @Body() updatedUserDto: Partial<CreateUserDto>,
   ) {
     return this.userService.updateUser(userId, updatedUserDto);
   }

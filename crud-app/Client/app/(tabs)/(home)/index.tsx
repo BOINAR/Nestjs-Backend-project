@@ -23,11 +23,12 @@ import {
   View,
   Text,
   Image,
-  ScrollView,
-  ActivityIndicator,
-  Button
+  FlatList,
+  Button,
+  Modal,
+  TextInput,
+  ActivityIndicator
 } from "react-native";
-import {FlatList} from "react-native-gesture-handler";
 
 interface User {
   _id: string;
@@ -40,14 +41,18 @@ interface User {
 const UserList = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+
+  const [updatedName, setUpdatedName] = useState("");
+  const [updatedEmail, setUpdatedEmail] = useState("");
+  const [updatedAge, setUpdatedAge] = useState<number | string>("");
 
   useEffect(() => {
     const fetchUsers = async () => {
       try {
         const response = await fetch("http://10.0.2.2:3000/users");
         const data = await response.json();
-        console.log(data);
-
         setUsers(data);
       } catch (error) {
         console.error("Erreur lors du chargement des utilisateurs:", error);
@@ -59,9 +64,64 @@ const UserList = () => {
     fetchUsers();
   }, []);
 
-  const DeleteUserFromList = async (userId: string) => {
-    setUsers(users.filter(user => user._id != userId));
+  const handleUpdatePress = (user: User) => {
+    setSelectedUser(user);
+    setUpdatedName(user.name);
+    setUpdatedEmail(user.email);
+    setUpdatedAge(user.age.toString());
+    setModalVisible(true);
   };
+
+  const handleUpdateSubmit = async () => {
+    if (!selectedUser) return;
+
+    try {
+      const response = await fetch(
+        `http://10.0.2.2:3000/users/${selectedUser._id}`,
+        {
+          method: "PATCH",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({
+            name: updatedName,
+            email: updatedEmail,
+            age: parseInt(updatedAge.toString(), 10)
+          })
+        }
+      );
+
+      
+
+      if (response.ok) {
+        const updatedUser = await response.json();
+        console.log(updatedUser);
+        
+        setUsers(prevUsers =>
+          prevUsers.map(user =>
+            user._id === updatedUser._id ? updatedUser : user
+          )
+        );
+        setModalVisible(false);
+      } else {
+        console.error("Erreur lors de la mise à jour de l'utilisateur");
+      }
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour de l'utilisateur:", error);
+    }
+  };
+
+  const renderItem = ({item}: {item: User}) => (
+    <View
+      key={item._id}
+      className="flex-row bg-white rounded-lg shadow p-4 mb-4 items-center">
+      <Image source={{uri: item.photo}} className="w-16 h-16 rounded-full" />
+      <View className="ml-4 flex-1">
+        <Text className="text-lg font-bold text-gray-800">{item.name}</Text>
+        <Text className="text-sm text-gray-500">{item.email}</Text>
+        <Text className="text-sm text-gray-500">{item.age} ans</Text>
+      </View>
+      <Button title="Update" onPress={() => handleUpdatePress(item)} />
+    </View>
+  );
 
   if (loading) {
     return (
@@ -72,26 +132,48 @@ const UserList = () => {
   }
 
   return (
-    <ScrollView className="p-4">
-      {users.map(user => (
-        <View
-          key={user._id}
-          className="flex-row bg-white rounded-lg shadow p-4 mb-4 items-center">
-          <Image
-            source={{uri: user.photo}}
-            className="w-16 h-16 rounded-full"
-          />
-          <View className="ml-4">
-            <Text className="text-lg font-bold text-gray-800">{user.name}</Text>
-            <Text className="text-sm text-gray-500">{user.email}</Text>
-            <Text className="text-sm text-gray-500">{user.age} ans</Text>
+    <>
+      <FlatList
+        data={users}
+        renderItem={renderItem}
+        keyExtractor={item => item._id}
+        contentContainerStyle={{padding: 16}}
+      />
+
+      <Modal visible={modalVisible} animationType="slide" transparent={true}>
+        <View className="flex-1 justify-center items-center bg-gray-900 bg-opacity-50">
+          <View className="bg-white p-6 rounded-lg w-3/4">
+            <Text className="text-lg font-bold mb-4">Update User</Text>
+            <TextInput
+              className="border border-gray-300 rounded-lg p-2 mb-2"
+              value={updatedName}
+              onChangeText={setUpdatedName}
+              placeholder="Name"
+            />
+            <TextInput
+              className="border border-gray-300 rounded-lg p-2 mb-2"
+              value={updatedEmail}
+              onChangeText={setUpdatedEmail}
+              placeholder="Email"
+              keyboardType="email-address"
+            />
+            <TextInput
+              className="border border-gray-300 rounded-lg p-2 mb-4"
+              value={updatedAge.toString()}
+              onChangeText={setUpdatedAge}
+              placeholder="Age"
+              keyboardType="numeric"
+            />
+            <Button title="Save" onPress={handleUpdateSubmit} />
             <Button
-              title="Delete"
-              onPress={() => DeleteUserFromList(user._id)}></Button>
+              title="Cancel"
+              onPress={() => setModalVisible(false)}
+              color="red"
+            />
           </View>
         </View>
-      ))}
-    </ScrollView>
+      </Modal>
+    </>
   );
 };
 
