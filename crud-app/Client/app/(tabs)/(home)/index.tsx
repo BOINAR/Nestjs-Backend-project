@@ -4,7 +4,7 @@
 // export default function HomeScreen() {
 //   return (
 //     <View className="flex-1 justify-center items-center">
-//       <Text className="text-xl text-blue-500">nayeff boinariziki🎉</Text>
+//       <Text className="text-xl text-blue-500">Hello world !!!</Text>
 //       <Link href="/details/1">aller à details 1</Link>
 //       <Link
 //         href={{
@@ -27,8 +27,12 @@ import {
   Button,
   Modal,
   TextInput,
-  ActivityIndicator
+  ActivityIndicator,
+  TouchableOpacity,
+  Platform
 } from "react-native";
+
+import * as ImagePicker from "expo-image-picker";
 
 interface User {
   _id: string;
@@ -47,11 +51,12 @@ const UserList = () => {
   const [updatedName, setUpdatedName] = useState("");
   const [updatedEmail, setUpdatedEmail] = useState("");
   const [updatedAge, setUpdatedAge] = useState<number | string>("");
+  const [updatedPhoto, setUpdatedPhoto] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const response = await fetch("http://10.0.2.2:3000/users");
+        const response = await fetch("http://192.168.1.67:3000/users");
         const data = await response.json();
         setUsers(data);
       } catch (error) {
@@ -64,11 +69,36 @@ const UserList = () => {
     fetchUsers();
   }, []);
 
+  const pickImage = async () => {
+    // Demander la permission
+    const permissionResult =
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permissionResult.granted) {
+      alert("Permission refusée pour accéder à la galerie !");
+      return;
+    }
+
+    // Ouvrir le sélecteur d'image
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.5
+    });
+
+    if (!result.canceled) {
+      setUpdatedPhoto(result.assets[0].uri);
+    }
+  };
+
   const handleUpdatePress = (user: User) => {
     setSelectedUser(user);
     setUpdatedName(user.name);
     setUpdatedEmail(user.email);
     setUpdatedAge(user.age.toString());
+    setUpdatedPhoto(user.photo);
+    setUpdatedPhoto(user.photo);
     setModalVisible(true);
   };
 
@@ -77,7 +107,7 @@ const UserList = () => {
 
     try {
       const response = await fetch(
-        `http://10.0.2.2:3000/users/${selectedUser._id}`,
+        `http://192.168.1.67:3000/users/${selectedUser._id}`,
         {
           method: "PATCH",
           headers: {"Content-Type": "application/json"},
@@ -89,15 +119,15 @@ const UserList = () => {
         }
       );
 
-      
-
       if (response.ok) {
         const updatedUser = await response.json();
         console.log(updatedUser);
-        
+
         setUsers(prevUsers =>
           prevUsers.map(user =>
-            user._id === updatedUser._id ? updatedUser : user
+            user._id === updatedUser._id
+              ? {...updatedUser, photo: updatedPhoto || updatedUser.photo}
+              : user
           )
         );
         setModalVisible(false);
@@ -119,7 +149,18 @@ const UserList = () => {
         <Text className="text-sm text-gray-500">{item.email}</Text>
         <Text className="text-sm text-gray-500">{item.age} ans</Text>
       </View>
-      <Button title="Update" onPress={() => handleUpdatePress(item)} />
+      <View className="flex-row gap-2">
+        <TouchableOpacity
+          className="bg-blue-400  px-4 py-2 rounded-md"
+          onPress={() => handleUpdatePress(item)}>
+          <Text className="text-white font-semibold">Update</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          className="bg-red-400  px-4 py-2 rounded-md"
+          onPress={() => deleteUserFromList(item._id)}>
+          <Text className="text-white font-semibold">Delete</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 
@@ -164,6 +205,17 @@ const UserList = () => {
               placeholder="Age"
               keyboardType="numeric"
             />
+            <TouchableOpacity
+              className="bg-gray-300 p-3 rounded-lg mb-4"
+              onPress={pickImage}>
+              <Text className="text-center">Pick Profile Image</Text>
+            </TouchableOpacity>
+            {updatedPhoto && (
+              <Image
+                source={{uri: updatedPhoto}}
+                className="w-24 h-24 rounded-full self-center mb-4"
+              />
+            )}
             <Button title="Save" onPress={handleUpdateSubmit} />
             <Button
               title="Cancel"
