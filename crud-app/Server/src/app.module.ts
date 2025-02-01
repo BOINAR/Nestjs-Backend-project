@@ -3,8 +3,6 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from '../modules/users/users.module';
-import { UsersController } from '../modules/users/users.controller';
-import { UsersService } from '../modules/users/users.service';
 import * as dotenv from 'dotenv';
 dotenv.config();
 

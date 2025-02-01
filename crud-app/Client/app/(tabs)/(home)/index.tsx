@@ -28,8 +28,7 @@ import {
   Modal,
   TextInput,
   ActivityIndicator,
-  TouchableOpacity,
-  Platform
+  TouchableOpacity
 } from "react-native";
 
 import * as ImagePicker from "expo-image-picker";
@@ -53,11 +52,15 @@ const UserList = () => {
   const [updatedAge, setUpdatedAge] = useState<number | string>("");
   const [updatedPhoto, setUpdatedPhoto] = useState<string | null>(null);
 
+  console.log(selectedUser);
+  
+
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const response = await fetch("http://192.168.1.67:3000/users");
+        const response = await fetch("http://192.168.1.181:3000/users");
         const data = await response.json();
+
         setUsers(data);
       } catch (error) {
         console.error("Erreur lors du chargement des utilisateurs:", error);
@@ -92,12 +95,16 @@ const UserList = () => {
     }
   };
 
+  const deleteUserFromList = (userId: string) => {
+    // Exclure l'utilisateur de la liste sans appeler une route DELETE
+    setUsers(users.filter(user => user._id !== userId));
+  };
+
   const handleUpdatePress = (user: User) => {
     setSelectedUser(user);
     setUpdatedName(user.name);
     setUpdatedEmail(user.email);
     setUpdatedAge(user.age.toString());
-    setUpdatedPhoto(user.photo);
     setUpdatedPhoto(user.photo);
     setModalVisible(true);
   };
@@ -107,7 +114,7 @@ const UserList = () => {
 
     try {
       const response = await fetch(
-        `http://192.168.1.67:3000/users/${selectedUser._id}`,
+        `http://192.168.1.181:3000/users/${selectedUser._id}`,
         {
           method: "PATCH",
           headers: {"Content-Type": "application/json"},
@@ -132,7 +139,11 @@ const UserList = () => {
         );
         setModalVisible(false);
       } else {
-        console.error("Erreur lors de la mise à jour de l'utilisateur");
+        const errorDetails = await response.json(); // Récupérer les détails d'erreur (si fournis par le backend)
+        console.error(
+          "Erreur côté serveur :",
+          errorDetails.message || response.statusText
+        );
       }
     } catch (error) {
       console.error("Erreur lors de la mise à jour de l'utilisateur:", error);
